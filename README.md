@@ -26,3 +26,4 @@ an iOS app to demo the usage of some Yelp API (Search, Review).
 - Hardcoded values, literal strings.
 - UI improvement needed, such as image button, loading indicator, app icon, default image, keeping cell selection while sorting restaurants, ...
 - Draft code many places to be improved.
+- There exist several minor warnings in thirdparty libraries which are left as is.

@@ -1,5 +1,5 @@
 # yelpdemo
-an iOS app to demo the usage of some Yelp API (Search, Review).
+an iOS app to demo the usage of some Yelp API (Search, Review, Business).
 
 ## Environment
 - Xcode 9
@@ -19,9 +19,9 @@ an iOS app to demo the usage of some Yelp API (Search, Review).
 - Grid sortable alphabetically by restaurant name (asc/desc).
 - Tap each grid item to be taken to a detail view.
 - Details view of each restaurant include the latest review and a photo as well as the name and address.
+- Support multiple photos on Details view.
 
 ## Known Issues
-- Use SwiftyJSON instead to simplify JSON parsing.
 - Tried to make the code testable, but didn't get the chance to write the UT yet.
 - Given the simplicity of the demo, current verison of YelpRestaurantFinder is somewhat like a utility class, may consider to have a data model entity as needed to maintain states and handle caching.
 - Hardcoded values, literal strings.

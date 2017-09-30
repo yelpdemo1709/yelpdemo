@@ -8,6 +8,7 @@
 
 import UIKit
 import Alamofire
+import SwiftyJSON
 
 class YelpRestaurantFinder: NSObject {
     
@@ -64,8 +65,11 @@ class YelpRestaurantFinder: NSObject {
                               method: .post,
                               parameters: parameters).responseJSON { response in
                 self.logResponse(response)
-                if let json = response.result.value as? [String: Any] {
-                    if let token = json["access_token"] as? String, let interval = json["expires_in"] as? TimeInterval {
+                switch response.result {
+                case .success(let value):
+                    let json = JSON(value)
+                    print("JSON: \(json)")
+                    if let token = json["access_token"].string, let interval = json["expires_in"].double {
                         self.token = YelpToken(token: token, expires: Date(timeIntervalSinceNow:interval))
                         then(nil)
                     } else {
@@ -73,7 +77,8 @@ class YelpRestaurantFinder: NSObject {
                         print(e.localizedDescription)
                         then(e)
                     }
-                } else {
+                case .failure(let error):
+                    print(error)
                     let e = self.errorFromTokenRefresh(code: .InvalidResponse, underlyingError: response.error)
                     print(e.localizedDescription)
                     then(e)
@@ -113,22 +118,24 @@ class YelpRestaurantFinder: NSObject {
                                   encoding: URLEncoding.default,
                                   headers: headers).responseJSON { response in
                     self.logResponse(response)
-                    if let json = response.result.value as? [String: Any] {
-                        if let businesses = json["businesses"] as? Array<Dictionary<String, Any>> {
+                    switch response.result {
+                    case .success(let value):
+                        let json = JSON(value)
+                        print("JSON: \(json)")
+                        if let businesses = json["businesses"].array {
                             if let factory = self.restaurantFactory {
                                 var restaurants = [IRestaurant]()
                                 for business in businesses {
-                                    if let id = business["id"] as? String,
-                                        let name = business["name"] as? String,
-                                        let location = business["location"] as? Dictionary<String, Any>,
-                                        let addressArray = location["display_address"] as? Array<String> {
+                                    if let id = business["id"].string,
+                                        let name = business["name"].string,
+                                        let addressArray = business["location"]["display_address"].array {
                                         if addressArray.count > 0 {
-                                            let address = addressArray.joined(separator: ", ")
+                                            let address = addressArray.map { $0.stringValue}.joined(separator: ", ")
                                             var restaurant = factory.createRestaurant(id: id, name: name, address: address)
-                                            if let imageUrlStr = business["image_url"] as? String {
-                                                restaurant.imageUrlStr = imageUrlStr
-                                            }
+                                            restaurant.imageUrlStr = business["image_url"].string
                                             restaurants.append(restaurant)
+                                        } else {
+                                            print("Unexpected address format")
                                         }
                                     } else {
                                         print("Unexpected format")
@@ -145,7 +152,8 @@ class YelpRestaurantFinder: NSObject {
                             print(e.localizedDescription)
                             completion(nil, e)
                         }
-                    } else {
+                    case .failure(let error):
+                        print(error)
                         let e = self.errorFromSearch(code: .InvalidResponse, underlyingError: response.error)
                         print(e.localizedDescription)
                         completion(nil, e)
@@ -178,22 +186,24 @@ class YelpRestaurantFinder: NSObject {
                                   encoding: URLEncoding.default,
                                   headers: headers).responseJSON { response in
                                     self.logResponse(response)
-                                    if let json = response.result.value as? [String: Any] {
-                                        if let reviewsArray = json["reviews"] as? Array<Dictionary<String, Any>> {
+                                    switch response.result {
+                                    case .success(let value):
+                                        let json = JSON(value)
+                                        print("JSON: \(json)")
+                                        if let reviewsArray = json["reviews"].array {
                                             if let factory = self.businessReviewFactory {
                                                 var reviews = [IBusinessReview]()
                                                 for reviewDict in reviewsArray {
-                                                    if let text = reviewDict["text"] as? String,
-                                                        let user = reviewDict["user"] as? Dictionary<String, Any>,
-                                                        let username = user["name"] as? String,
-                                                        let dateStr = reviewDict["time_created"] as? String {
+                                                    if let text = reviewDict["text"].string,
+                                                        let username = reviewDict["user"]["name"].string,
+                                                        let dateStr = reviewDict["time_created"].string {
                                                         let dateFormatter = DateFormatter()
                                                         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
                                                         if let date = dateFormatter.date(from: dateStr) {
                                                             let review = factory.createBusinessReview(username: username, timeCreated: date, text: text)
                                                             reviews.append(review)
                                                         } else {
-                                                            print("Unexpected format")
+                                                            print("Unexpected date format")
                                                         }
                                                     } else {
                                                         print("Unexpected format")
@@ -210,7 +220,8 @@ class YelpRestaurantFinder: NSObject {
                                             print(e.localizedDescription)
                                             completion(nil, e)
                                         }
-                                    } else {
+                                    case .failure(let error):
+                                        print(error)
                                         let e = self.errorFromReview(code: .InvalidResponse, underlyingError: response.error)
                                         print(e.localizedDescription)
                                         completion(nil, e)

@@ -16,6 +16,9 @@ class DetailViewController: UIViewController {
     @IBOutlet weak var commentLabel: UILabel!
     @IBOutlet weak var commentView: UITextView!
     @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var pageControl: UIPageControl!
+    
+    var photoUrls :[URL]?
 
     func configureView() {
         // Update the user interface for the detail item.
@@ -23,22 +26,26 @@ class DetailViewController: UIViewController {
             if let label = detailDescriptionLabel {
                 label.isHidden = true
             }
-            nameLabel.text = detail.name
+            navigationItem.title = detail.name
+            nameLabel.text = nil
             nameLabel.isHidden = false
             addressLabel.text = detail.address
             addressLabel.isHidden = false
             commentLabel.isHidden = false
             commentView.isHidden = false
+            pageControl.isHidden = true
         } else {
             if let label = detailDescriptionLabel {
                 label.isHidden = false
             }
+            navigationItem.title = "Detail"
             nameLabel.text = nil
             nameLabel.isHidden = true
             addressLabel.text = nil
             addressLabel.isHidden = true
             commentLabel.isHidden = true
             commentView.isHidden = true
+            pageControl.isHidden = true
         }
     }
 
@@ -47,8 +54,16 @@ class DetailViewController: UIViewController {
         // Do any additional setup after loading the view, typically from a nib.
         configureView()
         
-        loadImage()
+        imageView.isUserInteractionEnabled = true
+        let leftSwipeRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(onSwipe))
+        leftSwipeRecognizer.direction = .left
+        let rightSwipeRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(onSwipe))
+        rightSwipeRecognizer.direction = .right
+        imageView.addGestureRecognizer(leftSwipeRecognizer)
+        imageView.addGestureRecognizer(rightSwipeRecognizer)
+
         loadReview()
+        loadPhotos()
     }
 
     override func didReceiveMemoryWarning() {
@@ -62,17 +77,27 @@ class DetailViewController: UIViewController {
 //            configureView()
         }
     }
-
-    func loadImage() {
+    
+    func loadPhotos() {
         guard  let restaurant = detailItem  else {
             print("No detailItem")
             return
         }
-        guard  let imageUrlStr = restaurant.imageUrlStr  else {
-            print("No imageUrlStr")
-            return
+        YelpRestaurantFinder.sharedInstance.queryRestaurantPhotos(restaurant: restaurant) { (urls, error) in
+            if let photoUrls = urls {
+                self.photoUrls = photoUrls
+                self.pageControl.isHidden = photoUrls.count <= 1
+                self.pageControl.numberOfPages = photoUrls.count
+                self.pageControl.currentPage = 0
+                self.loadImage()
+            }
         }
-        _ = imageView.asyncFetchImageFromServerURL(urlString: imageUrlStr, complete: { (_, _) in })
+    }
+
+    func loadImage() {
+        if let photoUrl = photoUrls?[pageControl.currentPage] {
+            _ = self.imageView.asyncFetchImageFromServerURL(urlString: photoUrl.absoluteString, complete: { (_, _) in })
+        }
     }
     
     func loadReview() {
@@ -110,5 +135,21 @@ class DetailViewController: UIViewController {
             }
         }
     }
+    
+    @objc func onSwipe(swipe: UISwipeGestureRecognizer) {
+        if (swipe.direction == .left) {
+//            print("Left Swipe")
+            if pageControl.currentPage < pageControl.numberOfPages {
+                pageControl.currentPage = pageControl.currentPage + 1
+                loadImage()
+            }
+        }
+        if (swipe.direction == .right) {
+//            print("Right Swipe")
+            if pageControl.currentPage > 0 {
+                pageControl.currentPage = pageControl.currentPage - 1
+                loadImage()
+            }
+        }
+    }
 }
-

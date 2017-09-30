@@ -41,12 +41,12 @@ extension UIImageView {
             
             DispatchQueue.main.async(execute: { () -> Void in
                 if self.waitingForUrl == urlString {
-                    print("\(urlString) downloaded")
+//                    print("\(urlString) downloaded")
                     let image = UIImage(data: data)
                     self.image = image
                     complete(data, true)
                 } else {
-                    print("\(urlString) downloaded but not set, cell is being used for a different program")
+                    print("\(urlString) downloaded but not set, imageView is being used for a different URL")
                     complete(data, false)
                 }
             })

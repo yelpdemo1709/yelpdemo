@@ -43,19 +43,11 @@ class YelpRestaurantFinder: NSObject {
     static let sharedInstance = YelpRestaurantFinder()
 
     func refreshTokenAsNeeded(then: @escaping (NSError?) -> Void) {
-        var refreshNeeded = true
-        if let cachedToken = token {
-            if cachedToken.expiration <= Date() {
-                print("Cached Yelp token expired")
-                token = nil
-            } else {
-                refreshNeeded = false
-                then(nil)
-            }
+        if token != nil && token!.isValid() {
+            then(nil)
         } else {
-            print("No cached Yelp token")
-        }
-        if refreshNeeded {
+            print("No cached Yelp token or it expired")
+            token = nil
             let parameters: Parameters = [
                 "grant_type": "client_credentials",
                 "client_id": YelpRestaurantFinder.YelpClientId,
@@ -64,25 +56,25 @@ class YelpRestaurantFinder: NSObject {
             Alamofire.request(YelpRestaurantFinder.YelpApiTokenUri,
                               method: .post,
                               parameters: parameters).responseJSON { response in
-                self.logResponse(response)
-                switch response.result {
-                case .success(let value):
-                    let json = JSON(value)
-                    print("JSON: \(json)")
-                    if let token = json["access_token"].string, let interval = json["expires_in"].double {
-                        self.token = YelpToken(token: token, expires: Date(timeIntervalSinceNow:interval))
-                        then(nil)
-                    } else {
-                        let e = self.errorFromTokenRefresh(code: .MissingRequiredInfo, underlyingError: response.error)
-                        print(e.localizedDescription)
-                        then(e)
-                    }
-                case .failure(let error):
-                    print(error)
-                    let e = self.errorFromTokenRefresh(code: .InvalidResponse, underlyingError: response.error)
-                    print(e.localizedDescription)
-                    then(e)
-                }
+                                self.logResponse(response)
+                                switch response.result {
+                                case .success(let value):
+                                    let json = JSON(value)
+                                    print("JSON: \(json)")
+                                    if let token = json["access_token"].string, let interval = json["expires_in"].double {
+                                        self.token = YelpToken(token: token, expires: Date(timeIntervalSinceNow:interval))
+                                        then(nil)
+                                    } else {
+                                        let e = self.errorFromTokenRefresh(code: .MissingRequiredInfo, underlyingError: response.error)
+                                        print(e.localizedDescription)
+                                        then(e)
+                                    }
+                                case .failure(let error):
+                                    print(error)
+                                    let e = self.errorFromTokenRefresh(code: .InvalidResponse, underlyingError: response.error)
+                                    print(e.localizedDescription)
+                                    then(e)
+                                }
             }
         }
     }

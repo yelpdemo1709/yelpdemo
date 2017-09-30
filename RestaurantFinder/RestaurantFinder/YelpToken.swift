@@ -11,10 +11,14 @@ import UIKit
 class YelpToken: NSObject {
 
     var tokenStr: String
-    var expiration: Date
+    private var expiration: Date
     
     init(token: String, expires: Date) {
         self.tokenStr = token
         self.expiration = expires
+    }
+    
+    func isValid() -> Bool {
+        return expiration > Date()
     }
 }
